@@ -1,0 +1,35 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "opencode-access",
+	"main": "src/app.ts",
+	"compatibility_date": "2026-04-20",
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	},
+	"upload_source_maps": true,
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./public"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "CONFIG_CACHE",
+			"id": "00000000000000000000000000000000"
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "USER_DB",
+			"database_name": "opencode-access-users",
+			"database_id": "00000000-0000-0000-0000-000000000000"
+		}
+	],
+	"compatibility_flags": [
+		"nodejs_compat"
+	]
+}

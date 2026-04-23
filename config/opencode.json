@@ -1,0 +1,42 @@
+{
+	"$schema": "https://opencode.ai/config.json",
+	"share": "disabled",
+	"model": "{providerId}/@cf/moonshotai/kimi-k2.6",
+	"small_model": "{providerId}/@cf/google/gemma-4-26b-a4b-it",
+	"enabled_providers": ["{providerId}"],
+	"provider": {
+		"{providerId}": {
+			"npm": "@ai-sdk/openai-compatible",
+			"name": "{providerName}",
+			"options": {
+				"apiKey": "",
+				"baseURL": "{baseURL}/v1",
+				"headers": {
+					"cf-access-token": "{env:{ENV_NAME}}",
+					"X-Requested-With": "xmlhttprequest"
+				}
+			},
+			"models": {
+				"@cf/moonshotai/kimi-k2.6": {
+					"id": "workers-ai/@cf/moonshotai/kimi-k2.6",
+					"name": "Workers AI Kimi K2.6",
+					"limit": {
+						"context": 262144
+					}
+				},
+				"claude-4-7-opus": {
+					"id": "anthropic/claude-4-7-opus",
+					"name": "Claude 4.7 Opus",
+					"limit": {
+						"context": 1000000,
+						"output": 128000
+					}
+				},
+				"@cf/google/gemma-4-26b-a4b-it": {
+					"id": "workers-ai/@cf/google/gemma-4-26b-a4b-it",
+					"name": "Workers AI Gemma 4 26B A4B"
+				}
+			}
+		}
+	}
+}
