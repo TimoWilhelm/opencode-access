@@ -12,6 +12,9 @@ This template follows the same core pattern described in Cloudflare's post on [t
 
 ![Architecture overview](./org/Architecture.png)
 
+> [!NOTE]
+> The automatic catalog refresh shown in the architecture diagram is not included in this repository.
+
 In practice, that gives you:
 
 - One discovery URL for OpenCode bootstrap.
@@ -138,8 +141,6 @@ It is a standard OpenCode config template with four placeholders resolved at req
 - `{providerName}` from `OPENCODE_PROVIDER_NAME`
 - `{baseURL}` from the request origin
 - `{ENV_NAME}` is always `OPENCODE_ACCESS_TOKEN`
-
-Add, remove, or rename a model by editing that file only. There is no separate allowlist.
 
 ## Endpoints
 
