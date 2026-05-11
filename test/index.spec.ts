@@ -236,6 +236,7 @@ describe("opencode access gateway worker", () => {
 		expect(requests).toHaveLength(1);
 		expect(requests[0].headers.get("authorization")).toBeNull();
 		expect(requests[0].headers.get("cookie")).toBeNull();
+		expect(requests[0].headers.get("host")).toBeNull();
 		expect(requests[0].headers.get("cf-aig-authorization")).toBe(
 			"Bearer set-via-wrangler-secret",
 		);
@@ -282,6 +283,116 @@ describe("opencode access gateway worker", () => {
 			requests[1].headers.get("cf-aig-metadata") ?? "{}",
 		);
 		expect(secondMetadata.userId).toBe(firstMetadata.userId);
+	});
+
+	it("proxies authenticated websocket upgrades to AI Gateway with allowlisted models", async () => {
+		const env = createTestEnv();
+		const email = `developer-${crypto.randomUUID()}@example.com`;
+		const token = await issueAccessToken({ email });
+		const requests: Array<{ headers: Headers }> = [];
+		const upstreamUrl = new URL(
+			`https://gateway.ai.cloudflare.com/v1/${env.CLOUDFLARE_ACCOUNT_ID}/${env.AIG_GATEWAY_ID}/compat/responses`,
+		);
+		upstreamUrl.searchParams.set("model", "anthropic/claude-4-7-opus");
+
+		stubPlatformFetch({
+			jwksUrl: `${env.TEAM_DOMAIN}/cdn-cgi/access/certs`,
+			upstreamUrl: upstreamUrl.href,
+			upstreamHandler: async (request) => {
+				requests.push({ headers: new Headers(request.headers) });
+				return createWebSocketUpgradeResponse();
+			},
+		});
+
+		const response = await callWorker(
+			env,
+			new Request("https://gateway.example.com/v1/responses?model=claude-4-7-opus", {
+				method: "GET",
+				headers: {
+					authorization: `Bearer ${token}`,
+					upgrade: "websocket",
+					connection: "Upgrade",
+					host: "gateway.example.com",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		expect(requests).toHaveLength(1);
+		expect(requests[0].headers.get("upgrade")).toBe("websocket");
+		expect(requests[0].headers.get("authorization")).toBeNull();
+		expect(requests[0].headers.get("host")).toBeNull();
+		expect(requests[0].headers.get("cf-aig-authorization")).toBe(
+			"Bearer set-via-wrangler-secret",
+		);
+
+		const metadata: GatewayMetadata = JSON.parse(
+			requests[0].headers.get("cf-aig-metadata") ?? "{}",
+		);
+		expect(metadata.authType).toBe("cloudflare-access");
+		expect(metadata.userId).toMatch(UUID_V4_PATTERN);
+	});
+
+	it("rejects websocket upgrades without a model query parameter", async () => {
+		const env = createTestEnv();
+		const token = await issueAccessToken();
+
+		stubPlatformFetch({
+			jwksUrl: `${env.TEAM_DOMAIN}/cdn-cgi/access/certs`,
+		});
+
+		const response = await callWorker(
+			env,
+			new Request("https://gateway.example.com/v1/responses", {
+				method: "GET",
+				headers: {
+					authorization: `Bearer ${token}`,
+					upgrade: "websocket",
+					connection: "Upgrade",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({
+			error: {
+				message: "A model query parameter must be provided",
+			},
+		});
+	});
+
+	it("returns 502 when AI Gateway does not complete the websocket upgrade", async () => {
+		const env = createTestEnv();
+		const token = await issueAccessToken();
+		const upstreamUrl = new URL(
+			`https://gateway.ai.cloudflare.com/v1/${env.CLOUDFLARE_ACCOUNT_ID}/${env.AIG_GATEWAY_ID}/compat/responses`,
+		);
+		upstreamUrl.searchParams.set("model", "anthropic/claude-4-7-opus");
+
+		stubPlatformFetch({
+			jwksUrl: `${env.TEAM_DOMAIN}/cdn-cgi/access/certs`,
+			upstreamUrl: upstreamUrl.href,
+			upstreamHandler: async () => new Response("upgrade failed", { status: 500 }),
+		});
+
+		const response = await callWorker(
+			env,
+			new Request("https://gateway.example.com/v1/responses?model=claude-4-7-opus", {
+				method: "GET",
+				headers: {
+					authorization: `Bearer ${token}`,
+					upgrade: "websocket",
+					connection: "Upgrade",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(502);
+		expect(await response.json()).toEqual({
+			error: {
+				message: "AI Gateway did not complete the WebSocket upgrade",
+			},
+		});
 	});
 
 	it("rejects Access tokens that do not include an email claim", async () => {
@@ -487,4 +598,21 @@ function stubPlatformFetch(options: {
 			throw new Error(`Unexpected fetch to ${request.url}`);
 		}),
 	);
+}
+
+function createWebSocketUpgradeResponse(): Response {
+	const response = new Response(null, {
+		status: 200,
+		headers: {
+			connection: "Upgrade",
+			upgrade: "websocket",
+		},
+	});
+
+	Object.defineProperty(response, "webSocket", {
+		value: {},
+		configurable: true,
+	});
+
+	return response;
 }

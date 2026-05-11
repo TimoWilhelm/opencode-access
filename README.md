@@ -155,6 +155,9 @@ It is a standard OpenCode config template with four placeholders resolved at req
   - Access-protected OpenAI-compatible model list.
 - `POST /v1/chat/completions`
   - Access-protected chat completions proxy.
+- `GET /v1/responses` with `Upgrade: websocket`
+  - Access-protected WebSocket proxy for compatible responses requests.
+  - Requires a `model` query parameter so the Worker can enforce the model allowlist before opening the socket.
 
 ## OpenCode Usage
 

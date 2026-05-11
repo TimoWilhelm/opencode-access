@@ -5,8 +5,11 @@ import { extractAccessToken, getAccessUserMetadata, verifyAccessToken } from "./
 import {
 	getCanonicalModelId,
 	getRequestedModel,
+	getRequestedWebSocketModel,
+	isWebSocketUpgradeRequest,
 	parseChatCompletionPayload,
 	proxyChatCompletions,
+	proxyWebSocketResponses,
 } from "./ai-gateway";
 import { loadCatalog } from "./catalog";
 import { buildDiscoveryEnvelope, buildModelsResponse } from "./discovery";
@@ -90,6 +93,44 @@ app.get("/", (c) => c.env.ASSETS.fetch(c.req.raw));
 app.get("/v1/models", async (c) => {
 	const catalog = loadCatalog(c.env);
 	return c.json(buildModelsResponse(c.env, catalog));
+});
+
+app.get("/v1/responses", async (c) => {
+	if (!isWebSocketUpgradeRequest(c.req.raw)) {
+		return jsonError(c, 404, "Not found");
+	}
+
+	const model = getRequestedWebSocketModel(c.req.raw);
+	if (!model) {
+		return jsonError(c, 400, "A model query parameter must be provided");
+	}
+
+	const catalog = loadCatalog(c.env);
+	const canonicalModel = getCanonicalModelId(model, catalog.models);
+	if (!canonicalModel) {
+		return jsonError(c, 403, `Model '${model}' is not allowed by this gateway`);
+	}
+
+	const proxyResponse = await proxyWebSocketResponses(
+		c.req.raw,
+		c.env,
+		c.get("anonymousUserId"),
+		canonicalModel,
+	);
+
+	if (!proxyResponse.webSocket) {
+		console.error(
+			JSON.stringify({
+				message: "AI Gateway did not complete the WebSocket upgrade",
+				path: new URL(c.req.url).pathname,
+				status: proxyResponse.status,
+			}),
+		);
+
+		return jsonError(c, 502, "AI Gateway did not complete the WebSocket upgrade");
+	}
+
+	return proxyResponse;
 });
 
 app.post("/v1/chat/completions", async (c) => {

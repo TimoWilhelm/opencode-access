@@ -36,6 +36,14 @@ export function getCanonicalModelId(
 	return undefined;
 }
 
+export function isWebSocketUpgradeRequest(request: Request): boolean {
+	return request.method === "GET" && request.headers.get("upgrade")?.toLowerCase() === "websocket";
+}
+
+export function getRequestedWebSocketModel(request: Request): string | undefined {
+	return new URL(request.url).searchParams.get("model") ?? undefined;
+}
+
 export async function proxyChatCompletions(
 	requestHeaders: Headers,
 	env: Env,
@@ -46,6 +54,24 @@ export async function proxyChatCompletions(
 		method: "POST",
 		headers: buildProxyHeaders(requestHeaders, env, userId),
 		body: JSON.stringify(payload),
+	});
+}
+
+export async function proxyWebSocketResponses(
+	request: Request,
+	env: Env,
+	userId: string,
+	model: string,
+): Promise<Response> {
+	const upstreamUrl = getAiGatewayCompatRequestUrl(env, request.url);
+	upstreamUrl.searchParams.set("model", model);
+
+	const headers = buildProxyHeaders(request.headers, env, userId);
+	headers.set("upgrade", "websocket");
+
+	return fetch(upstreamUrl, {
+		method: request.method,
+		headers,
 	});
 }
 
@@ -95,4 +121,10 @@ function buildProxyHeaders(
 
 function getAiGatewayCompatUrl(env: Env, pathname: string): string {
 	return `https://gateway.ai.cloudflare.com/v1/${env.CLOUDFLARE_ACCOUNT_ID}/${env.AIG_GATEWAY_ID}/compat${pathname}`;
+}
+
+function getAiGatewayCompatRequestUrl(env: Env, requestUrl: string): URL {
+	const url = new URL(requestUrl);
+	const compatPath = url.pathname.startsWith("/v1") ? url.pathname.slice("/v1".length) || "/" : url.pathname;
+	return new URL(`${getAiGatewayCompatUrl(env, compatPath)}${url.search}`);
 }
