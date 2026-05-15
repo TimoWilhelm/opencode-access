@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>Authorization Successful</title>
+	<title>OpenCode Access</title>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 	<style>
 		* {
@@ -65,8 +65,7 @@
 			content: counter(step);
 			position: absolute;
 			left: 1rem;
-			top: 50%;
-			transform: translateY(-50%);
+			top: 1.5rem;
 			background: #f6821f;
 			color: #fff;
 			width: 28px;
@@ -83,10 +82,50 @@
 			background: #2d3748;
 			color: #fff;
 			padding: 1rem;
+			padding-right: 2.5rem;
 			border-radius: 6px;
 			font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 			margin: 0.5rem 0;
 			word-break: break-all;
+			position: relative;
+		}
+
+		.code-block .copy-btn {
+			position: absolute;
+			top: 50%;
+			right: 0.5rem;
+			transform: translateY(-50%);
+			background: transparent;
+			border: none;
+			color: rgba(255, 255, 255, 0.45);
+			cursor: pointer;
+			padding: 0.25rem;
+			line-height: 0;
+			transition: color 0.15s;
+		}
+
+		.code-block .copy-btn:hover {
+			color: #fff;
+		}
+
+		.code-block .copy-btn.copied {
+			color: #68d391;
+		}
+
+		.copy-btn .icon-copy,
+		.copy-btn .icon-check {
+			width: 18px;
+			height: 18px;
+			display: none;
+		}
+
+		.copy-btn .icon-copy { display: block; }
+		.copy-btn.copied .icon-copy { display: none; }
+		.copy-btn.copied .icon-check { display: block; }
+
+		#login-host:empty {
+			display: inline-block;
+			min-width: 12ch;
 		}
 
 		a {
@@ -99,44 +138,99 @@
 			color: #d86b13;
 		}
 
+		.banner {
+			background: #fff8f0;
+			border-left: 3px solid #f6821f;
+			padding: 0.75rem 1rem;
+			border-radius: 4px;
+			font-size: 0.9rem;
+			color: #555;
+			margin-bottom: 2rem;
+		}
+
+		.banner strong {
+			color: #f6821f;
+		}
+
 		.note {
 			font-size: 0.9rem;
 			color: #666;
 			margin-top: 0.5rem;
 		}
+
+		.detail {
+			font-size: 0.9rem;
+			color: #555;
+			margin-top: 0.5rem;
+		}
+
+		.detail code {
+			background: #edf2f7;
+			padding: 0.15rem 0.35rem;
+			border-radius: 3px;
+			font-size: 0.85rem;
+		}
 	</style>
 </head>
 <body>
 	<div class="container">
-		<h1>Authorization Successful</h1>
-		<p class="subtitle">You can close this window and return to OpenCode, or follow the steps below to finish setup.</p>
+		<h1>Welcome to OpenCode Access</h1>
+		<p class="subtitle">You've reached the OpenCode access gateway. To get started, follow these steps.</p>
+
+		<div class="banner">
+			<strong>Early Access:</strong> This integration is in early access. Features and authentication flows may change as we iterate.
+		</div>
 
 		<ul class="steps">
 			<li>
 				<strong>Install OpenCode</strong><br>
-				Follow the install instructions at
-				<a href="https://opencode.ai/docs/" target="_blank" rel="noopener">opencode.ai/docs</a>.
+				New install &mdash; run the install script (recommended):
+				<div class="code-block">curl -fsSL https://opencode.ai/install | bash<button class="copy-btn" type="button" aria-label="Copy command" data-text="curl -fsSL https://opencode.ai/install | bash"><svg class="icon-copy" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/></svg><svg class="icon-check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></svg></button></div>
+				<p class="detail">
+					<strong>Alternatively:</strong> <code>npm install -g opencode-ai</code> or <code>bun install -g opencode-ai</code>
+				</p>
+				<p class="detail">
+					<strong>Homebrew:</strong> <code>brew install anomalyco/tap/opencode</code>.
+					If you previously ran <code>brew install opencode</code> (without the tap), uninstall first:
+					<code>brew uninstall opencode && brew install anomalyco/tap/opencode</code>
+				</p>
+				<p class="detail">
+					<strong>Already installed?</strong> Upgrade via <code>opencode upgrade</code>, then confirm with <code>opencode --version</code>.
+				</p>
 			</li>
 			<li>
-				<strong>Authenticate</strong><br>
+				<strong>Authenticate via Terminal</strong><br>
 				Run this command in your terminal:
-				<div class="code-block">opencode auth login <span id="login-host">this site</span></div>
-				<div class="note">Requires <code>cloudflared</code> 2024.10 or newer.</div>
+				<div class="code-block" id="login-command">opencode auth login <span id="login-host"></span><button class="copy-btn" id="copy-btn" type="button" aria-label="Copy command"><svg class="icon-copy" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/></svg><svg class="icon-check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></svg></button></div>
 			</li>
 			<li>
-				<strong>Configure models</strong><br>
-				See
-				<a href="https://opencode.ai/docs/config/" target="_blank" rel="noopener">opencode.ai/docs/config</a>
-				for model and provider configuration.
+				<strong>Start Using OpenCode</strong><br>
+				Once authenticated, you're ready to use all OpenCode features.
+				See <a href="https://opencode.ai/docs/config/" target="_blank" rel="noopener">opencode.ai/docs/config</a> for model and provider configuration.
 			</li>
 		</ul>
 	</div>
 	<script>
 		(function () {
 			var el = document.getElementById("login-host");
-			if (el && window.location && window.location.origin) {
+			if (el) {
 				el.textContent = window.location.origin;
 			}
+
+			document.querySelectorAll(".copy-btn").forEach(function (btn) {
+				btn.addEventListener("click", function () {
+					var text = btn.getAttribute("data-text");
+					if (!text) {
+						text = "opencode auth login " + window.location.origin;
+					}
+					navigator.clipboard.writeText(text).then(function () {
+						btn.classList.add("copied");
+						setTimeout(function () {
+							btn.classList.remove("copied");
+						}, 2000);
+					});
+				});
+			});
 		})();
 	</script>
 </body>
